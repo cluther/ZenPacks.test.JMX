@@ -1,1 +1,422 @@
 name: ZenPacks.test.JMX
+
+
+device_classes:
+  /Test/JMX:
+    remove: true
+
+    zProperties:
+      zCollectorPlugins: []
+      zDeviceTemplates:
+        - JVM-Memory
+        - JVM-Threading
+        - JVM-GarbageCollector
+        - JVM-ClassLoading
+        - JVM-Compilation
+        - JMXTester
+
+    templates:
+      JMV-Threading:
+        description: JVM Threading Statistics
+        datasources:
+          DEFAULTS:
+            type: JMX
+            component: JVM
+            severity: Error
+            eventClass: /Test/JMX
+            cycletime: 10
+            objectName: "java.lang:type=Threading"
+
+          CurrentThreadCpuTime:
+            attributeName: CurrentThreadCpuTime
+            datapoints: {CurrentThreadCpuTime: DERIVE_MIN_0}
+
+          ThreadCount:
+            attributeName: ThreadCount
+            datapoints: {ThreadCount: GAUGE_MIN_0}
+
+          DaemonThreadCount:
+            attributeName: DaemonThreadCount
+            datapoints: {DaemonThreadCount: GAUGE_MIN_0}
+
+          PeakThreadCount:
+            attributeName: PeakThreadCount
+            datapoints: {PeakThreadCount: GAUGE_MIN_0}
+
+          TotalStartedThreadCount:
+            attributeName: TotalStartedThreadCount
+            datapoints: {TotalStartedThreadCount: DERIVE_MIN_0}
+
+        thresholds:
+          DEFAULTS:
+            eventClass: /Test/JVM
+            severity: Warning
+
+          "high thread churn":
+            dsnames: [TotalStartedThreadCount_TotalStartedThreadCount]
+            type: DurationThreshold
+            maxval: 100
+            timePeriod: "1 hour"
+            violationPercentage: 50
+
+        graphs:
+          CPU Usage:
+            units: percent
+            miny: 0
+            maxy: 100
+
+            graphpoints:
+              Current Thread:
+                dpName: CurrentThreadCpuTime_CurrentThreadCpuTime
+                rpn: 10000000,/
+
+          Thread Counts:
+            units: threads
+            miny: 0
+
+            graphpoints:
+              Total: {dpName: ThreadCount_ThreadCount}
+              Daemon: {dpName: DaemonThreadCount_DaemonThreadCount}
+
+          Thread Creation Rate:
+            units: threads/sec
+            miny: 0
+
+            graphpoints:
+              Total:
+                dpName: TotalStartedThreadCount_TotalStartedThreadCount
+                includeThresholds: true
+
+      JVM-Memory:
+        description: JVM Memory Statistics
+        datasources:
+          DEFAULTS:
+            type: JMX
+            component: JVM
+            severity: Error
+            eventClass: /Test/JMX
+            cycletime: 10
+
+          HeapMemoryUsage:
+            objectName: "java.lang:type=Memory"
+            attributeName: HeapMemoryUsage
+            datapoints:
+              init: GAUGE_MIN_0
+              committed: GAUGE_MIN_0
+              used: GAUGE_MIN_0
+              max: GAUGE_MIN_0
+
+          NonHeapMemoryUsage:
+            objectName: "java.lang:type=Memory"
+            attributeName: NonHeapMemoryUsage
+            datapoints:
+              init: GAUGE_MIN_0
+              committed: GAUGE_MIN_0
+              used: GAUGE_MIN_0
+              max:
+                rrdtype: GAUGE
+                rrdmin: 0
+
+          ObjectPendingFinalizationCount:
+            objectName: "java.lang:type=Memory"
+            attributeName: ObjectPendingFinalizationCount
+            datapoints: {ObjectPendingFinalizationCount: GAUGE_MIN_0}
+
+          HeapMemoryUtilization:
+            type: Calculated Performance
+            cycletime: "10"
+            expression: "(HeapMemoryUsage_used / HeapMemoryUsage_max) * 100.0"
+            targetAsRate: false
+            datapoints: {HeapMemoryUtilization: GAUGE_MIN_0_MAX_100}
+
+        thresholds:
+          DEFAULTS:
+            eventClass: /Test/JVM
+            severity: Warning
+
+          "high memory":
+            dsnames: [HeapMemoryUtilization_HeapMemoryUtilization]
+            type: PredictiveThreshold
+            maxval: 95
+            pastData: 1
+            pastDataUnits: days
+            amountToPredict: 7
+            amountToPredictUnits: days
+            evaluationFrequency: 600
+
+        graphs:
+          Heap Memory Utilization:
+            units: percent
+            miny: 0
+            maxy: 100
+
+            graphpoints:
+              Used:
+                dpName: HeapMemoryUtilization_HeapMemoryUtilization
+                includeThresholds: true
+
+          Heap Memory Usage:
+            units: bytes
+            miny: 0
+
+            graphpoints:
+              Initial: {dpName: HeapMemoryUsage_init}
+              Committed: {dpName: HeapMemoryUsage_committed}
+              Used: {dpName: HeapMemoryUsage_used}
+              Maximum: {dpName: HeapMemoryUsage_max}
+
+          Non-Heap Memory Usage:
+            units: bytes
+            miny: 0
+
+            graphpoints:
+              Initial: {dpName: NonHeapMemoryUsage_init}
+              Committed: {dpName: NonHeapMemoryUsage_committed}
+              Used: {dpName: NonHeapMemoryUsage_used}
+              Maximum: {dpName: NonHeapMemoryUsage_max}
+
+          Objects Pending Finalization:
+            units: objects
+            miny: 0
+
+            graphpoints:
+              Objects: {dpName: ObjectPendingFinalizationCount_ObjectPendingFinalizationCount}
+
+      JVM-GarbageCollector:
+        description: JVM Garbage Collector Statistics
+        datasources:
+          DEFAULTS:
+            type: JMX
+            component: JVM
+            severity: Error
+            eventClass: /Test/JMX
+            cycletime: 10
+
+          MarkSweepCount:
+            objectName: "java.lang:type=GarbageCollector,name=PS MarkSweep"
+            attributeName: CollectionCount
+            datapoints: {CollectionCount: DERIVE_MIN_0}
+
+          MarkSweepTime:
+            objectName: "java.lang:type=GarbageCollector,name=PS MarkSweep"
+            attributeName: CollectionTime
+            datapoints: {CollectionTime: DERIVE_MIN_0}
+
+          ScavengeCount:
+            objectName: "java.lang:type=GarbageCollector,name=PS Scavenge"
+            attributeName: CollectionCount
+            datapoints: {CollectionCount: DERIVE_MIN_0}
+
+          ScavengeTime:
+            objectName: "java.lang:type=GarbageCollector,name=PS Scavenge"
+            attributeName: CollectionTime
+            datapoints: {CollectionTime: DERIVE_MIN_0}
+
+        graphs:
+          Garbage Collection Rate:
+            units: collections/sec
+            miny: 0
+
+            graphpoints:
+              MarkSweep: {dpName: MarkSweepCount_CollectionCount}
+              Scavenge: {dpName: ScavengeCount_CollectionCount}
+
+          Garbage Collection Time:
+            units: percent
+            miny: 0
+            maxy: 100
+
+            graphpoints:
+              MarkSweep:
+                dpName: MarkSweepTime_CollectionTime
+                rpn: 10,/
+
+              Scavenge:
+                dpName: Scavenge_CollectionTime
+                rpn: 10,/
+
+      JVM-ClassLoading:
+        description: JVM Class Loading Statistics
+        datasources:
+          DEFAULTS:
+            type: JMX
+            component: JVM
+            severity: Error
+            eventClass: /Test/JMX
+            cycletime: 10
+            objectName: "java.lang:type=ClassLoading"
+
+          LoadedClassCount:
+            attributeName: LoadedClassCount
+            datapoints: {LoadedClassCount: GAUGE_MIN_0}
+
+          TotalLoadedClassCount:
+            attributeName: TotalLoadedClassCount
+            datapoints: {TotalLoadedClassCount: GAUGE_MIN_0}
+
+          UnloadedClassCount:
+            attributeName: UnloadedClassCount
+            datapoints: {UnloadedClassCount: GAUGE_MIN_0}
+
+        thresholds:
+          DEFAULTS:
+            eventClass: /Test/JVM
+            severity: Warning
+
+          too many classes loaded:
+            dsnames: [LoadedClassCount_LoadedClassCount]
+            type: MinMaxThreshold
+            maxval: 15000
+
+        graphs:
+          Class Loading:
+            units: classes
+            miny: 0
+
+            graphpoints:
+              Currently Loaded:
+                dpName: LoadedClassCount_LoadedClassCount
+                includeThresholds: true
+
+              Total Loaded: {dpName: TotalLoadedClassCount_TotalLoadedClassCount}
+              Total Unloaded: {dpName: UnloadedClassCount_UnloadedClassCount}
+
+      JVM-Compilation:
+        description: JVM Compilation Statistics
+        datasources:
+          DEFAULTS:
+            type: JMX
+            component: JVM
+            severity: Error
+            eventClass: /Test/JMX
+            cycletime: 10
+            objectName: "java.lang:type=Compilation"
+
+          TotalCompilationTime:
+            attributeName: TotalCompilationTime
+            datapoints: {TotalCompilationTime: DERIVE_MIN_0}
+
+        graphs:
+          Compilation Time:
+            units: percent
+            miny: 0
+            maxy: 100
+
+            graphpoints:
+              Total Compilation:
+                dpName: TotalCompilationTime_TotalCompilationTime
+                rpn: 10,/
+
+      JMXTester:
+        description: Application Monitoring for jmx-tester
+        datasources:
+          DEFAULTS:
+            type: JMX
+            component: JVMTester
+            severity: Error
+            eventClass: /Test/JMXTester
+            cycletime: 10
+            objectName: "jmx-tester:type=JMXTestObjectMBean"
+
+          AInt:
+            attributeName: AInt
+            datapoints: {AInt: GAUGE_MIN_0}
+
+          ADouble:
+            attributeName: ADouble
+            datapoints: {ADouble: GAUGE_MIN_0}
+
+          AFloat:
+            attributeName: AFloat
+            datapoints: {AFloat: GAUGE_MIN_0}
+
+          ANumericString:
+            attributeName: ANumericString
+            datapoints: {ANumericString: GAUGE_MIN_0}
+
+          AMap:
+            attributeName: AMap
+            datapoints:
+              key1: GAUGE_MIN_0
+              key2: GAUGE_MIN_0
+
+          AverageResponseTime:
+            attributeName: ATable
+            attributePath: "[AverageResponseTime,HttpInputSensor].{Value}"
+            datapoints: {AverageResponseTime: GAUGE_MIN_0}
+
+          NumberOfCalls:
+            attributeName: ATable
+            attributePath: "[NumberOfCalls,HttpInputSensor].{Value}"
+            datapoints: {NumberOfCalls: GAUGE_MIN_0}
+
+        thresholds:
+          DEFAULTS:
+            eventClass: /Test/JMXTester
+            severity: Warning
+
+          "slow response time":
+            dsnames: [AverageResponseTime_AverageResponseTime]
+            type: MinMaxThreshold
+            maxval: 60
+
+          "too many calls":
+            dsnames: [NumberOfCalls_NumberOfCalls]
+            type: MinMaxThreshold
+            maxval: 100
+
+          "arbitrary example":
+            dsnames: [AInt_AInt]
+            type: PredictiveThreshold
+            maxval: 300000
+            pastData: 1
+            pastDataUnits: days
+            amountToPredict: 7
+            amountToPredictUnits: days
+            evaluationFrequency: 600
+
+        graphs:
+          Scalar Values - jmx-tester:
+            units: values
+            miny: 0
+
+            graphpoints:
+              Integer:
+                dpName: AInt_AInt
+                includeThresholds: true
+
+              Double: {dpName: ADouble_ADouble}
+              Float: {dpName: AFloat_AFloat}
+              String: {dpName: ANumericString_ANumericString}
+
+          Map Values - jmx-tester:
+            units: values
+            miny: 0
+
+            graphpoints:
+              Key 1: {dpName: AMap_key1}
+              Key 2: {dpName: AMap_key2}
+
+          Tabular Values - jmx-tester:
+            units: values
+            miny: 0
+
+            graphpoints:
+              Average Response Time:
+                dpName: AverageResponseTime_AverageResponseTime
+                includeThresholds: true
+
+              Number of Calls:
+                dpName: NumberOfCalls_NumberOfCalls
+                includeThresholds: true
+
+
+event_classes:
+  /Test/JMX:
+    remove: true
+
+  /Test/JVM:
+    remove: true
+
+  /Test/JMXTester:
+    remove: true

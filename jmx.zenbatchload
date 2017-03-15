@@ -1,0 +1,7 @@
+/Devices/Test/JMX
+test-jvm \
+    setManageIp="172.17.0.1", \
+    zJmxManagementPort=9991, \
+    zJmxAuthenticate=False, \
+    zJmxUsername="", \
+    zJmxPassword=""
